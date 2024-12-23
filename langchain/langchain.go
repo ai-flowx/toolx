@@ -1,8 +1,8 @@
 package langchain
 
 /*
-#cgo CFLAGS: -I/usr/include/python3.12
-#cgo LDFLAGS: -lpython3.12
+#cgo CFLAGS: -I/usr/include/python3.13
+#cgo LDFLAGS: -lpython3.13
 
 #define Py_LIMITED_API
 

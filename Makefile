@@ -2,6 +2,9 @@
 
 .PHONY: FORCE
 
+install: go-install
+.PHONY: install
+
 lint: go-lint
 .PHONY: lint
 
@@ -13,6 +16,9 @@ all-test: go-all-test
 
 
 # Non-PHONY targets (real files)
+
+go-install: FORCE
+	./script/install.sh
 
 go-lint: FORCE
 	./script/lint.sh
