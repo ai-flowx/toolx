@@ -6,9 +6,11 @@ def multiply(a: int, b: int) -> int:
     return a * b
 
 
-    async def amultiply(a: int, b: int) -> int:
-        """Multiply two numbers."""
-        return a * b
+'''
+async def amultiply(a: int, b: int) -> int:
+    """Multiply two numbers."""
+    return a * b
+'''
 
 
 #calculator = StructuredTool.from_function(func=multiply, coroutine=amultiply)
