@@ -1,0 +1,14 @@
+black
+colorama
+coverage
+coveralls
+flake8
+hypothesis
+langchain_core
+mypy
+pre-commit
+pytest
+pyyaml
+setuptools
+twine
+wheel
