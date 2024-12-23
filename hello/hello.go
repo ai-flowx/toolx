@@ -7,7 +7,7 @@ import (
 
 const (
 	name        = "hello"
-	description = "tools hello"
+	description = "hello tools"
 )
 
 type Hello struct{}
