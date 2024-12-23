@@ -5,6 +5,11 @@ import (
 	"fmt"
 )
 
+const (
+	name = "hello"
+	description = "tools hello"
+)
+
 type Hello struct{}
 
 func New() (*Hello, error) {
@@ -12,11 +17,11 @@ func New() (*Hello, error) {
 }
 
 func (h Hello) Name() string {
-	return "hello"
+	return name
 }
 
 func (h Hello) Description() string {
-	return "tools hello"
+	return description
 }
 
 func (h Hello) Call(ctx context.Context, args ...interface{}) (string, error) {
