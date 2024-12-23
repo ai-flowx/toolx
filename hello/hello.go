@@ -12,18 +12,22 @@ const (
 
 type Hello struct{}
 
-func New() (*Hello, error) {
-	return &Hello{}, nil
+func (h Hello) Init(_ context.Context) error {
+	return nil
 }
 
-func (h Hello) Name() string {
+func (h Hello) Deinit(_ context.Context) error {
+	return nil
+}
+
+func (h Hello) Name(_ context.Context) string {
 	return name
 }
 
-func (h Hello) Description() string {
+func (h Hello) Description(_ context.Context) string {
 	return description
 }
 
-func (h Hello) Call(ctx context.Context, args ...interface{}) (string, error) {
+func (h Hello) Call(_ context.Context, args ...interface{}) (string, error) {
 	return fmt.Sprintf("%v\n", args), nil
 }

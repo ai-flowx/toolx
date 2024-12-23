@@ -54,25 +54,21 @@ const (
 
 type LangChain struct{}
 
-func New() (*LangChain, error) {
-	return &LangChain{}, nil
-}
-
-func (l LangChain) Init() error {
+func (l LangChain) Init(_ context.Context) error {
 	C.init_python()
 	return nil
 }
 
-func (l LangChain) Deinit() error {
+func (l LangChain) Deinit(_ context.Context) error {
 	C.finalize_python()
 	return nil
 }
 
-func (l LangChain) Name() string {
+func (l LangChain) Name(_ context.Context) string {
 	return name
 }
 
-func (l LangChain) Description() string {
+func (l LangChain) Description(_ context.Context) string {
 	return description
 }
 
