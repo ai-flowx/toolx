@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	name = "hello"
+	name        = "hello"
 	description = "tools hello"
 )
 
