@@ -3,39 +3,7 @@ package decorator
 /*
 #cgo CFLAGS: -I/usr/include/python3.13
 #cgo LDFLAGS: -lpython3.13
-#define Py_LIMITED_API
 #include <Python.h>
-
-extern void Py_Initialize(void);
-extern void Py_Finalize(void);
-extern PyObject *PyRun_String(const char *str, int start, PyObject *globals, PyObject *locals);
-extern const char *PyUnicode_AsUTF8(PyObject *unicode);
-
-static void init_python() {
-	Py_Initialize();
-}
-
-static void finalize_python() {
-	Py_Finalize();
-}
-
-static PyObject* run_python(const char* source) {
-	PyObject* result = PyRun_String(source, Py_eval_input, PyEval_GetGlobals(), PyEval_GetLocals());
-	return result;
-}
-
-static char* get_result(PyObject* obj) {
-	if (!obj) {
-		return NULL;
-	}
-
-	PyObject* ret = PyObject_Str(obj);
-	if (!ret) {
-		return NULL;
-	}
-
-	return (char*)PyUnicode_AsUTF8(ret);
-}
 */
 import "C"
 
@@ -58,12 +26,18 @@ var source string
 type Decorator struct{}
 
 func (d Decorator) Init(_ context.Context) error {
-	C.init_python()
+	C.Py_Initialize()
+
+	if C.Py_IsInitialized() == 0 {
+		return errors.New("failed to init python\n")
+	}
+
 	return nil
 }
 
 func (d Decorator) Deinit(_ context.Context) error {
-	C.finalize_python()
+	C.Py_Finalize()
+
 	return nil
 }
 
@@ -79,17 +53,23 @@ func (d Decorator) Call(ctx context.Context, args ...interface{}) (string, error
 	cstr := C.CString(source)
 	defer C.free(unsafe.Pointer(cstr))
 
-	buf := C.run_python(cstr)
-	if buf == nil {
+	globals := C.PyDict_New()
+	defer C.Py_DecRef(globals)
+
+	locals := C.PyDict_New()
+	defer C.Py_DecRef(locals)
+
+	result := C.PyRun_String(cstr, C.Py_file_input, globals, locals)
+	if result == nil {
 		return "", errors.New("failed to run python\n")
 	}
 
-	defer C.Py_DecRef(buf)
+	defer C.Py_DecRef(result)
 
-	ret := C.get_result(buf)
-	if ret == nil {
-		return "", errors.New("failed to get result\n")
-	}
+	resultStr := C.PyObject_Str(result)
+	defer C.Py_DecRef(resultStr)
 
-	return C.GoString(ret), nil
+	resultCStr := C.PyUnicode_AsUTF8(resultStr)
+
+	return C.GoString(resultCStr), nil
 }
