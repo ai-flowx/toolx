@@ -1,13 +1,24 @@
 package runnables
 
+/*
+#cgo CFLAGS: -I/usr/include/python3.10
+#cgo LDFLAGS: -lpython3.10
+#include <Python.h>
+*/
+import "C"
+
 import (
 	"context"
+	_ "embed"
 )
 
 const (
 	name        = "runnables"
 	description = "runnables tools"
 )
+
+//go:embed runnables.py
+var source string
 
 type Runnables struct{}
 

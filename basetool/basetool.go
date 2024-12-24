@@ -1,13 +1,24 @@
 package basetool
 
+/*
+#cgo CFLAGS: -I/usr/include/python3.10
+#cgo LDFLAGS: -lpython3.10
+#include <Python.h>
+*/
+import "C"
+
 import (
 	"context"
+	_ "embed"
 )
 
 const (
 	name        = "basetool"
 	description = "basetool tools"
 )
+
+//go:embed basetool.py
+var source string
 
 type BaseTool struct{}
 
