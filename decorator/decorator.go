@@ -3,54 +3,57 @@ package decorator
 /*
 #cgo CFLAGS: -I/usr/include/python3.13
 #cgo LDFLAGS: -lpython3.13
-
 #define Py_LIMITED_API
-
 #include <Python.h>
 
 extern void Py_Initialize(void);
 extern void Py_Finalize(void);
-extern int PyRun_SimpleString(const char*);
-
-static PyObject* PyInit_gomodule(void) {
-	static PyMethodDef methods[] = {
-		{NULL, NULL, 0, NULL}
-	};
-
-	static PyModuleDef module = {
-		PyModuleDef_HEAD_INIT,
-		"gomodule",
-		"Go module for Python",
-		-1,
-		methods
-	};
-
-	return PyModule_Create(&module);
-}
+extern PyObject *PyRun_String(const char *str, int start, PyObject *globals, PyObject *locals);
+extern const char *PyUnicode_AsUTF8(PyObject *unicode);
 
 static void init_python() {
 	Py_Initialize();
 }
 
-static void call_python_function(const char* script) {
-	PyRun_SimpleString(script);
-}
-
 static void finalize_python() {
 	Py_Finalize();
+}
+
+static PyObject* run_python(const char* source) {
+	PyObject* result = PyRun_String(source, Py_eval_input, PyEval_GetGlobals(), PyEval_GetLocals());
+	return result;
+}
+
+static char* get_result(PyObject* obj) {
+	if (!obj) {
+		return NULL;
+	}
+
+	PyObject* ret = PyObject_Str(obj);
+	if (!ret) {
+		return NULL;
+	}
+
+	return (char*)PyUnicode_AsUTF8(ret);
 }
 */
 import "C"
 
 import (
 	"context"
+	_ "embed"
 	"unsafe"
+
+	"github.com/pkg/errors"
 )
 
 const (
 	name        = "decorator"
 	description = "decorator tools"
 )
+
+//go:embed decorator.py
+var source string
 
 type Decorator struct{}
 
@@ -73,12 +76,20 @@ func (d Decorator) Description(_ context.Context) string {
 }
 
 func (d Decorator) Call(ctx context.Context, args ...interface{}) (string, error) {
-	script := `print("hello decorator")`
+	cstr := C.CString(source)
+	defer C.free(unsafe.Pointer(cstr))
 
-	buf := C.CString(script)
-	defer C.free(unsafe.Pointer(buf))
+	buf := C.run_python(cstr)
+	if buf == nil {
+		return "", errors.New("failed to run python\n")
+	}
 
-	C.call_python_function(buf)
+	defer C.Py_DecRef(buf)
 
-	return "", nil
+	ret := C.get_result(buf)
+	if ret == nil {
+		return "", errors.New("failed to get result\n")
+	}
+
+	return C.GoString(ret), nil
 }
