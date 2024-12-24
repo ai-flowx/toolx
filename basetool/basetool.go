@@ -1,4 +1,4 @@
-package langchain
+package basetool
 
 /*
 #cgo CFLAGS: -I/usr/include/python3.13
@@ -48,37 +48,37 @@ import (
 )
 
 const (
-	name        = "langchain"
-	description = "langchain tools"
+	name        = "basetool"
+	description = "basetool tools"
 )
 
-type LangChain struct{}
+type BaseTool struct{}
 
-func (l LangChain) Init(_ context.Context) error {
+func (b BaseTool) Init(_ context.Context) error {
 	C.init_python()
 	return nil
 }
 
-func (l LangChain) Deinit(_ context.Context) error {
+func (b BaseTool) Deinit(_ context.Context) error {
 	C.finalize_python()
 	return nil
 }
 
-func (l LangChain) Name(_ context.Context) string {
+func (b BaseTool) Name(_ context.Context) string {
 	return name
 }
 
-func (l LangChain) Description(_ context.Context) string {
+func (b BaseTool) Description(_ context.Context) string {
 	return description
 }
 
-func (l LangChain) Call(ctx context.Context, args ...interface{}) (string, error) {
-	script := `print("hello langchain")`
+func (b BaseTool) Call(ctx context.Context, args ...interface{}) (string, error) {
+	script := `print("hello basetool")`
 
-	s := C.CString(script)
-	defer C.free(unsafe.Pointer(s))
+	buf := C.CString(script)
+	defer C.free(unsafe.Pointer(buf))
 
-	C.call_python_function(s)
+	C.call_python_function(buf)
 
 	return "", nil
 }

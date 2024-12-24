@@ -1,4 +1,4 @@
-package langchain
+package runnables
 
 import (
 	"testing"
@@ -6,6 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLangChain(t *testing.T) {
+func TestRunnables(t *testing.T) {
 	assert.Equal(t, nil, nil)
 }
