@@ -49,7 +49,7 @@ func (d Decorator) Description(_ context.Context) string {
 	return description
 }
 
-func (d Decorator) Call(ctx context.Context, args ...interface{}) (string, error) {
+func (d Decorator) Call(_ context.Context, _ ...interface{}) (string, error) {
 	cstr := C.CString(source)
 	defer C.free(unsafe.Pointer(cstr))
 
@@ -61,6 +61,7 @@ func (d Decorator) Call(ctx context.Context, args ...interface{}) (string, error
 
 	result := C.PyRun_String(cstr, C.Py_file_input, globals, locals)
 	if result == nil {
+		C.PyErr_Print()
 		return "", errors.New("failed to run python\n")
 	}
 
