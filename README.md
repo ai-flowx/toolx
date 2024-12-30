@@ -33,3 +33,4 @@ Project License can be found [here](LICENSE).
 - [langchain-tools](https://python.langchain.com/docs/how_to/custom_tools/)
 - [langchain-tools](https://python.langchain.com/docs/integrations/tools/)
 - [langchaingo](https://github.com/tmc/langchaingo)
+- [openwechat](github.com/eatmoreapple/openwechat)
