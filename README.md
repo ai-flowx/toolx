@@ -28,9 +28,6 @@ Project License can be found [here](LICENSE).
 
 - [crewai-tools](https://docs.crewai.com/concepts/tools)
 - [crewai-tools](https://github.com/crewAIInc/crewAI-tools)
-- [dify-on-wechat](https://docs.dify.ai/zh-hans/learn-more/use-cases/dify-on-wechat)
-- [dify-on-wechat](https://github.com/hanfangyuan4396/dify-on-wechat/blob/master/channel/wechat/wechat_channel.py)
 - [langchain-tools](https://python.langchain.com/docs/how_to/custom_tools/)
 - [langchain-tools](https://python.langchain.com/docs/integrations/tools/)
 - [langchaingo](https://github.com/tmc/langchaingo)
-- [openwechat](github.com/eatmoreapple/openwechat)
