@@ -49,7 +49,7 @@ func (d Decorator) Description(_ context.Context) string {
 	return description
 }
 
-func (d Decorator) Call(_ context.Context, _ ...interface{}) (string, error) {
+func (d Decorator) Call(_ context.Context, _ func(context.Context, interface{}) (interface{}, error), _ ...interface{}) (string, error) {
 	cstr := C.CString(source)
 	defer C.free(unsafe.Pointer(cstr))
 

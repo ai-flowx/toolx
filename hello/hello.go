@@ -28,6 +28,6 @@ func (h Hello) Description(_ context.Context) string {
 	return description
 }
 
-func (h Hello) Call(_ context.Context, args ...interface{}) (string, error) {
+func (h Hello) Call(_ context.Context, _ func(context.Context, interface{}) (interface{}, error), args ...interface{}) (string, error) {
 	return fmt.Sprintf("%v\n", args), nil
 }

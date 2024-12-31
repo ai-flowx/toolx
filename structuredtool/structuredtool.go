@@ -49,7 +49,8 @@ func (s StructuredTool) Description(_ context.Context) string {
 	return description
 }
 
-func (s StructuredTool) Call(_ context.Context, _ ...interface{}) (string, error) {
+func (s StructuredTool) Call(_ context.Context, _ func(context.Context, interface{}) (interface{}, error),
+	_ ...interface{}) (string, error) {
 	cstr := C.CString(source)
 	defer C.free(unsafe.Pointer(cstr))
 

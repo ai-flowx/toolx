@@ -21,6 +21,10 @@ func TestDecorator(t *testing.T) {
 		_ = d.Deinit(ctx)
 	}(&d, ctx)
 
-	_, err := d.Call(ctx, "arg")
+	c := func(context.Context, interface{}) (interface{}, error) {
+		return nil, nil
+	}
+
+	_, err := d.Call(ctx, c, "arg")
 	assert.Equal(t, nil, err)
 }
