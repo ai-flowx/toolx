@@ -11,34 +11,55 @@ const (
 	description = "gerrit tools"
 )
 
-type Gerrit struct{}
+type Gerrit struct {
+	Branch  string
+	Commit  Commit
+	Project string
+}
 
-func (g Gerrit) Init(_ context.Context) error {
+type Commit struct {
+	Author    Author
+	Committer Committer
+	Diff      string
+	Message   string
+}
+
+type Author struct {
+	Email string
+	Name  string
+}
+
+type Committer struct {
+	Email string
+	Name  string
+}
+
+func (g *Gerrit) Init(_ context.Context) error {
 	return nil
 }
 
-func (g Gerrit) Deinit(_ context.Context) error {
+func (g *Gerrit) Deinit(_ context.Context) error {
 	return nil
 }
 
-func (g Gerrit) Name(_ context.Context) string {
+func (g *Gerrit) Name(_ context.Context) string {
 	return name
 }
 
-func (g Gerrit) Description(_ context.Context) string {
+func (g *Gerrit) Description(_ context.Context) string {
 	return description
 }
 
-func (g Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) (interface{}, error), args ...interface{}) (string, error) {
-	if len(args) == 0 {
+func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) (interface{}, error), args ...interface{}) (string, error) {
+	if len(args) == 0 || args[0].(string) == "" {
 		return "", errors.New("invalid arguments\n")
 	}
 
-	if err := g.clone(ctx); err != nil {
+	if err := g.parse(ctx, args[0].(string)); err != nil {
 		return "", err
 	}
 
-	if err := g.patch(ctx); err != nil {
+	if err := g.clone(ctx); err != nil {
 		return "", err
 	}
 
@@ -58,22 +79,22 @@ func (g Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) (
 	return url, nil
 }
 
-func (g Gerrit) clone(_ context.Context) error {
+func (g *Gerrit) parse(_ context.Context, content string) error {
 	return nil
 }
 
-func (g Gerrit) patch(_ context.Context) error {
+func (g *Gerrit) clone(_ context.Context) error {
 	return nil
 }
 
-func (g Gerrit) config(_ context.Context) error {
+func (g *Gerrit) config(_ context.Context) error {
 	return nil
 }
 
-func (g Gerrit) commit(_ context.Context) error {
+func (g *Gerrit) commit(_ context.Context) error {
 	return nil
 }
 
-func (g Gerrit) push(_ context.Context) (string, error) {
+func (g *Gerrit) push(_ context.Context) (string, error) {
 	return "", nil
 }

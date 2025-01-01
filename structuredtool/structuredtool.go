@@ -25,7 +25,7 @@ var source string
 
 type StructuredTool struct{}
 
-func (s StructuredTool) Init(_ context.Context) error {
+func (s *StructuredTool) Init(_ context.Context) error {
 	C.Py_Initialize()
 
 	if C.Py_IsInitialized() == 0 {
@@ -35,21 +35,21 @@ func (s StructuredTool) Init(_ context.Context) error {
 	return nil
 }
 
-func (s StructuredTool) Deinit(_ context.Context) error {
+func (s *StructuredTool) Deinit(_ context.Context) error {
 	C.Py_Finalize()
 
 	return nil
 }
 
-func (s StructuredTool) Name(_ context.Context) string {
+func (s *StructuredTool) Name(_ context.Context) string {
 	return name
 }
 
-func (s StructuredTool) Description(_ context.Context) string {
+func (s *StructuredTool) Description(_ context.Context) string {
 	return description
 }
 
-func (s StructuredTool) Call(_ context.Context, _ func(context.Context, interface{}) (interface{}, error),
+func (s *StructuredTool) Call(_ context.Context, _ func(context.Context, interface{}) (interface{}, error),
 	_ ...interface{}) (string, error) {
 	cstr := C.CString(source)
 	defer C.free(unsafe.Pointer(cstr))

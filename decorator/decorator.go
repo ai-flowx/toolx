@@ -25,7 +25,7 @@ var source string
 
 type Decorator struct{}
 
-func (d Decorator) Init(_ context.Context) error {
+func (d *Decorator) Init(_ context.Context) error {
 	C.Py_Initialize()
 
 	if C.Py_IsInitialized() == 0 {
@@ -35,21 +35,21 @@ func (d Decorator) Init(_ context.Context) error {
 	return nil
 }
 
-func (d Decorator) Deinit(_ context.Context) error {
+func (d *Decorator) Deinit(_ context.Context) error {
 	C.Py_Finalize()
 
 	return nil
 }
 
-func (d Decorator) Name(_ context.Context) string {
+func (d *Decorator) Name(_ context.Context) string {
 	return name
 }
 
-func (d Decorator) Description(_ context.Context) string {
+func (d *Decorator) Description(_ context.Context) string {
 	return description
 }
 
-func (d Decorator) Call(_ context.Context, _ func(context.Context, interface{}) (interface{}, error), _ ...interface{}) (string, error) {
+func (d *Decorator) Call(_ context.Context, _ func(context.Context, interface{}) (interface{}, error), _ ...interface{}) (string, error) {
 	cstr := C.CString(source)
 	defer C.free(unsafe.Pointer(cstr))
 
