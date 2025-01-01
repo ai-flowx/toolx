@@ -1,0 +1,61 @@
+From 7f55dbd98d417d7cf073763a94b0118a63560e72 Mon Sep 17 00:00:00 2001
+From: craftslab <name@example.com>
+Date: Wed, 1 Jan 2025 20:34:28 +0800
+Subject: [PATCH] feat(chore): update soong
+
+---
+ Android.bp    | 4 ++--
+ soong_ui.bash | 5 +++--
+ 2 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/Android.bp b/Android.bp
+index d78379a60..48d6adde5 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -40,7 +40,7 @@ cc_defaults {
+     host_supported: true,
+     target: {
+         host: {
+-            enabled: false,
++            enabled: true,
+         },
+         linux_bionic: {
+             enabled: true,
+@@ -250,6 +250,6 @@ build_prop {
+     stem: "build.prop",
+     ramdisk: true,
+     product_config: ":product_config",
+-    relative_install_path: "etc/ramdisk", // ramdisk/system/etc/ramdisk/build.prop
++    relative_install_path: "etc/ramdisk",
+     visibility: ["//visibility:private"],
+ }
+diff --git a/soong_ui.bash b/soong_ui.bash
+index be78b68fc..041677b34 100755
+--- a/soong_ui.bash
++++ b/soong_ui.bash
+@@ -1,4 +1,4 @@
+-#!/bin/bash -eu
++#!/bin/bash
+ #
+ # Copyright 2017 Google Inc. All rights reserved.
+ #
+@@ -14,6 +14,8 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
++echo "hello"
++
+ source $(cd $(dirname $BASH_SOURCE) &> /dev/null && pwd)/../make/shell_utils.sh
+ require_top
+ 
+@@ -29,7 +31,6 @@ esac
+ 
+ setup_cog_env_if_needed
+ 
+-# Save the current PWD for use in soong_ui
+ export ORIGINAL_PWD=${PWD}
+ export TOP=$(gettop)
+ source ${TOP}/build/soong/scripts/microfactory.bash
+-- 
+2.34.1
+

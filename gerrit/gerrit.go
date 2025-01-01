@@ -9,29 +9,32 @@ import (
 const (
 	name        = "gerrit"
 	description = "gerrit tools"
+
+	url    = "https://android.googlesource.com/"
+	branch = "main"
 )
 
 type Gerrit struct {
+	Project string
 	Branch  string
 	Commit  Commit
-	Project string
 }
 
 type Commit struct {
 	Author    Author
 	Committer Committer
-	Diff      string
 	Message   string
+	Diff      string
 }
 
 type Author struct {
-	Email string
 	Name  string
+	Email string
 }
 
 type Committer struct {
-	Email string
 	Name  string
+	Email string
 }
 
 func (g *Gerrit) Init(_ context.Context) error {
@@ -63,6 +66,10 @@ func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) 
 		return "", err
 	}
 
+	defer func(g *Gerrit, ctx context.Context) {
+		_ = g.clean(ctx)
+	}(g, ctx)
+
 	if err := g.config(ctx); err != nil {
 		return "", err
 	}
@@ -79,7 +86,7 @@ func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) 
 	return url, nil
 }
 
-func (g *Gerrit) parse(_ context.Context, content string) error {
+func (g *Gerrit) parse(_ context.Context, patch string) error {
 	return nil
 }
 
@@ -97,4 +104,8 @@ func (g *Gerrit) commit(_ context.Context) error {
 
 func (g *Gerrit) push(_ context.Context) (string, error) {
 	return "", nil
+}
+
+func (g *Gerrit) clean(_ context.Context) error {
+	return nil
 }
