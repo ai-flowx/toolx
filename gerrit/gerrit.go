@@ -44,10 +44,18 @@ type File struct {
 }
 
 func (g *Gerrit) Init(_ context.Context) error {
+	g.Patch = Patch{
+		File: []File{},
+		Diff: map[string]string{},
+	}
+
 	return nil
 }
 
 func (g *Gerrit) Deinit(_ context.Context) error {
+	clear(g.Patch.File)
+	clear(g.Patch.Diff)
+
 	return nil
 }
 
@@ -180,5 +188,13 @@ func (g *Gerrit) parseSummary(_ context.Context, content string) error {
 }
 
 func (g *Gerrit) parseChange(_ context.Context, content []*gitdiff.File) error {
+	if len(content) == 0 || len(g.Patch.File) != len(content) {
+		return errors.New("invalid content\n")
+	}
+
+	for index, item := range g.Patch.File {
+		g.Patch.Diff[item.Name] = content[index].String()
+	}
+
 	return nil
 }

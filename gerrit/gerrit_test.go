@@ -18,7 +18,10 @@ func initGerritTest(_ context.Context) (Gerrit, string) {
 	g := Gerrit{
 		Project: "",
 		Branch:  branch,
-		Patch:   Patch{},
+		Patch: Patch{
+			File: []File{},
+			Diff: map[string]string{},
+		},
 	}
 
 	d, _ := os.ReadFile("../test/gerrit/test.patch")
@@ -110,7 +113,8 @@ func TestParseChange(t *testing.T) {
 	ctx := context.Background()
 	g, d := initGerritTest(ctx)
 
-	c, _, _ := gitdiff.Parse(strings.NewReader(d))
+	c, s, _ := gitdiff.Parse(strings.NewReader(d))
+	_ = g.parseSummary(ctx, s)
 
 	err := g.parseChange(ctx, c)
 	assert.Equal(t, nil, err)
