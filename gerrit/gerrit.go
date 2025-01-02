@@ -16,8 +16,9 @@ const (
 	remote = "https://android.googlesource.com/"
 	branch = "main"
 
-	fromLen = 3
-	fileLen = 4
+	hashCol = 2
+	fromCol = 3
+	fileCol = 4
 )
 
 type Gerrit struct {
@@ -135,15 +136,15 @@ func (g *Gerrit) parseSummary(_ context.Context, content string) error {
 		return errors.New("invalid content\n")
 	}
 
-	if parts := strings.Fields(lines[0]); len(parts) > 0 {
-		g.Patch.Hash = parts[0]
+	if parts := strings.Fields(lines[0]); len(parts) >= hashCol {
+		g.Patch.Hash = parts[1]
 	}
 
 	authorRegexp := regexp.MustCompile(`From: ([^<]+)<([^>]+)>`)
 	for _, line := range lines {
 		if strings.HasPrefix(line, "From:") {
 			matches := authorRegexp.FindStringSubmatch(line)
-			if len(matches) == fromLen {
+			if len(matches) == fromCol {
 				g.Patch.Author = strings.TrimSpace(matches[1])
 				g.Patch.Email = strings.TrimSpace(matches[2])
 			}
@@ -165,7 +166,7 @@ func (g *Gerrit) parseSummary(_ context.Context, content string) error {
 	fileRegexp := regexp.MustCompile(`(\S+)\s+\|\s+(\d+)\s+([+-]+)`)
 	for _, line := range lines {
 		matches := fileRegexp.FindStringSubmatch(line)
-		if len(matches) == fileLen {
+		if len(matches) == fileCol {
 			file := File{
 				Name:      matches[1],
 				Insertion: strings.Count(matches[3], "+"),
