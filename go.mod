@@ -3,6 +3,7 @@ module github.com/ai-flowx/toolx
 go 1.23.4
 
 require (
+	github.com/bluekeyes/go-gitdiff v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 )

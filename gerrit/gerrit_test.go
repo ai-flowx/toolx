@@ -6,36 +6,39 @@ package gerrit
 
 import (
 	"context"
+	"os"
+	"strings"
 	"testing"
 
+	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	content string
-)
-
-func initGerritTest(_ context.Context) Gerrit {
-	return Gerrit{
+func initGerritTest(_ context.Context) (Gerrit, string) {
+	g := Gerrit{
 		Project: "",
 		Branch:  branch,
-		Commit:  Commit{},
+		Patch:   Patch{},
 	}
+
+	d, _ := os.ReadFile("../test/gerrit/test.patch")
+
+	return g, string(d)
 }
 
-func TestParse(t *testing.T) {
+func TestLoad(t *testing.T) {
 	ctx := context.Background()
-	g := initGerritTest(ctx)
+	g, d := initGerritTest(ctx)
 
-	err := g.parse(ctx, content)
+	err := g.load(ctx, d)
 	assert.Equal(t, nil, err)
 }
 
 func TestClone(t *testing.T) {
 	ctx := context.Background()
-	g := initGerritTest(ctx)
+	g, d := initGerritTest(ctx)
 
-	_ = g.parse(ctx, content)
+	_ = g.load(ctx, d)
 
 	defer func(g *Gerrit, ctx context.Context) {
 		_ = g.clean(ctx)
@@ -47,9 +50,9 @@ func TestClone(t *testing.T) {
 
 func TestConfig(t *testing.T) {
 	ctx := context.Background()
-	g := initGerritTest(ctx)
+	g, d := initGerritTest(ctx)
 
-	_ = g.parse(ctx, content)
+	_ = g.load(ctx, d)
 
 	defer func(g *Gerrit, ctx context.Context) {
 		_ = g.clean(ctx)
@@ -63,9 +66,9 @@ func TestConfig(t *testing.T) {
 
 func TestCommit(t *testing.T) {
 	ctx := context.Background()
-	g := initGerritTest(ctx)
+	g, d := initGerritTest(ctx)
 
-	_ = g.parse(ctx, content)
+	_ = g.load(ctx, d)
 
 	defer func(g *Gerrit, ctx context.Context) {
 		_ = g.clean(ctx)
@@ -84,11 +87,31 @@ func TestPush(t *testing.T) {
 
 func TestClean(t *testing.T) {
 	ctx := context.Background()
-	g := initGerritTest(ctx)
+	g, d := initGerritTest(ctx)
 
-	_ = g.parse(ctx, content)
+	_ = g.load(ctx, d)
 	_ = g.clone(ctx)
 
 	err := g.clean(ctx)
+	assert.Equal(t, nil, err)
+}
+
+func TestParseSummary(t *testing.T) {
+	ctx := context.Background()
+	g, d := initGerritTest(ctx)
+
+	_, s, _ := gitdiff.Parse(strings.NewReader(d))
+
+	err := g.parseSummary(ctx, s)
+	assert.Equal(t, nil, err)
+}
+
+func TestParseChange(t *testing.T) {
+	ctx := context.Background()
+	g, d := initGerritTest(ctx)
+
+	c, _, _ := gitdiff.Parse(strings.NewReader(d))
+
+	err := g.parseChange(ctx, c)
 	assert.Equal(t, nil, err)
 }
