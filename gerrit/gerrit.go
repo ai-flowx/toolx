@@ -277,8 +277,18 @@ func (g *Gerrit) reset(_ context.Context) error {
 		return errors.Wrap(err, "failed to get head\n")
 	}
 
+	commit, err := g.repo.CommitObject(ref.Hash())
+	if err != nil {
+		return errors.Wrap(err, "failed to get commit\n")
+	}
+
+	parentCommit, err := commit.Parent(0)
+	if err != nil {
+		return errors.Wrap(err, "failed to get parent\n")
+	}
+
 	if err = wt.Reset(&git.ResetOptions{
-		Commit: ref.Hash(),
+		Commit: parentCommit.Hash,
 		Mode:   git.HardReset,
 	}); err != nil {
 		return errors.Wrap(err, "failed to reset commit\n")
