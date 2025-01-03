@@ -14,13 +14,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	pushGerritTest = `
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 2 threads
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 353 bytes | 353.00 KiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (2/2)
+remote: Waiting for private key checker: 1/1 objects left
+remote: Update redirected to refs/for/refs/heads/main.
+remote: Processing changes: refs: 1, new: 1, done
+remote:
+remote: SUCCESS
+remote:
+remote:   https://android-review.googlesource.com/c/platform/build/soong/+/3435262 Test only [NEW]
+remote:
+To https://android.googlesource.com/platform/build/soong
+ * [new reference]       HEAD -> refs/for/master`
+)
+
 func initGerritTest(_ context.Context) (Gerrit, string) {
 	g := Gerrit{
-		Project: "",
-		Branch:  branch,
+		Project: "platform/build/soong",
+		Branch:  remoteBranch,
 		Patch: Patch{
 			File: []File{},
-			Diff: map[string]string{},
+			Diff: map[string]*gitdiff.File{},
 		},
 	}
 
@@ -67,7 +88,7 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
-func TestCommit(t *testing.T) {
+func TestApply(t *testing.T) {
 	ctx := context.Background()
 	g, d := initGerritTest(ctx)
 
@@ -80,12 +101,26 @@ func TestCommit(t *testing.T) {
 	_ = g.clone(ctx)
 	_ = g.config(ctx)
 
-	err := g.commit(ctx)
+	err := g.apply(ctx)
 	assert.Equal(t, nil, err)
 }
 
-func TestPush(t *testing.T) {
-	assert.Equal(t, nil, nil)
+func TestCommit(t *testing.T) {
+	ctx := context.Background()
+	g, d := initGerritTest(ctx)
+
+	_ = g.load(ctx, d)
+
+	defer func(g *Gerrit, ctx context.Context) {
+		_ = g.clean(ctx)
+	}(&g, ctx)
+
+	_ = g.clone(ctx)
+	_ = g.config(ctx)
+	_ = g.apply(ctx)
+
+	_, err := g.commit(ctx)
+	assert.Equal(t, nil, err)
 }
 
 func TestClean(t *testing.T) {
@@ -117,5 +152,13 @@ func TestParseChange(t *testing.T) {
 	_ = g.parseSummary(ctx, s)
 
 	err := g.parseChange(ctx, c)
+	assert.Equal(t, nil, err)
+}
+
+func TestParsePush(t *testing.T) {
+	ctx := context.Background()
+	g, _ := initGerritTest(ctx)
+
+	_, err := g.parsePush(ctx, pushGerritTest)
 	assert.Equal(t, nil, err)
 }

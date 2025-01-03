@@ -1,30 +1,48 @@
 package gerrit
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"fmt"
+	"io"
+	"os"
+	"path"
 	"regexp"
 	"strings"
 
 	"github.com/bluekeyes/go-gitdiff/gitdiff"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
 )
 
 const (
 	name        = "gerrit"
 	description = "gerrit tools"
+	count       = 3
 
-	remote = "https://android.googlesource.com/"
-	branch = "main"
+	remoteUrl    = "https://android.googlesource.com"
+	remoteBranch = "main"
 
 	hashCol = 2
 	fromCol = 3
 	fileCol = 4
+
+	userName  = "name"
+	userEmail = "name@example.com"
+
+	reviewUrl = `https://[-a-zA-Z0-9]+\.googlesource\.com/c/[^/]+/[^/]+/[^/]+/\+/\d+`
 )
 
 type Gerrit struct {
+	Path    string
 	Project string
 	Branch  string
 	Patch   Patch
+
+	repo *git.Repository
 }
 
 type Patch struct {
@@ -34,7 +52,7 @@ type Patch struct {
 	Date    string
 	Subject string
 	File    []File
-	Diff    map[string]string
+	Diff    map[string]*gitdiff.File
 }
 
 type File struct {
@@ -44,18 +62,18 @@ type File struct {
 }
 
 func (g *Gerrit) Init(_ context.Context) error {
+	g.Path = ""
+	g.Project = ""
+	g.Branch = remoteBranch
 	g.Patch = Patch{
 		File: []File{},
-		Diff: map[string]string{},
+		Diff: map[string]*gitdiff.File{},
 	}
 
 	return nil
 }
 
 func (g *Gerrit) Deinit(_ context.Context) error {
-	clear(g.Patch.File)
-	clear(g.Patch.Diff)
-
 	return nil
 }
 
@@ -68,11 +86,20 @@ func (g *Gerrit) Description(_ context.Context) string {
 }
 
 func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) (interface{}, error), args ...interface{}) (string, error) {
-	if len(args) == 0 || args[0].(string) == "" {
+	if len(args) == 0 {
 		return "", errors.New("invalid arguments\n")
 	}
 
-	if err := g.load(ctx, args[0].(string)); err != nil {
+	_patch := args[0].(string)
+
+	if len(args) == count-1 {
+		g.Project = args[1].(string)
+	} else if len(args) >= count {
+		g.Project = args[1].(string)
+		g.Branch = args[2].(string)
+	}
+
+	if err := g.load(ctx, _patch); err != nil {
 		return "", err
 	}
 
@@ -88,11 +115,11 @@ func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) 
 		return "", err
 	}
 
-	if err := g.commit(ctx); err != nil {
+	if err := g.apply(ctx); err != nil {
 		return "", err
 	}
 
-	url, err := g.push(ctx)
+	url, err := g.commit(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -117,23 +144,121 @@ func (g *Gerrit) load(ctx context.Context, content string) error {
 	return nil
 }
 
-func (g *Gerrit) clone(_ context.Context) error {
+func (g *Gerrit) clone(ctx context.Context) error {
+	var err error
+
+	if g.Project == "" || g.Branch == "" {
+		return errors.New("invalid arguments\n")
+	}
+
+	g.Path = path.Join(os.TempDir(), g.Project)
+
+	_ = os.RemoveAll(g.Path)
+
+	if g.repo, err = git.PlainCloneContext(ctx, g.Path, false, &git.CloneOptions{
+		URL:             fmt.Sprintf("%s/%s", remoteUrl, g.Project),
+		ReferenceName:   plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", g.Branch)),
+		SingleBranch:    true,
+		Depth:           1,
+		InsecureSkipTLS: true,
+	}); err != nil {
+		return errors.Wrap(err, "failed to clone repo\n")
+	}
+
 	return nil
 }
 
 func (g *Gerrit) config(_ context.Context) error {
+	cfg, err := g.repo.Config()
+	if err != nil {
+		return errors.Wrap(err, "failed to get config\n")
+	}
+
+	cfg.User.Name = userName
+	cfg.User.Email = userEmail
+
+	if err := g.repo.SetConfig(cfg); err != nil {
+		return errors.Wrap(err, "failed to set config\n")
+	}
+
 	return nil
 }
 
-func (g *Gerrit) commit(_ context.Context) error {
+func (g *Gerrit) apply(_ context.Context) error {
+	for _, item := range g.Patch.File {
+		p := path.Join(g.Path, item.Name)
+		f, err := os.Open(p)
+		if err != nil {
+			return errors.Wrap(err, "failed to open file\n")
+		}
+		var buf bytes.Buffer
+		if err := gitdiff.Apply(&buf, f, g.Patch.Diff[item.Name]); err != nil {
+			_ = f.Close()
+			return errors.Wrap(err, "failed to apply patch\n")
+		}
+		s, err := os.Stat(p)
+		if err != nil {
+			_ = f.Close()
+			return errors.Wrap(err, "failed to stat file\n")
+		}
+		if err := os.WriteFile(p, buf.Bytes(), s.Mode().Perm()); err != nil {
+			_ = f.Close()
+			return errors.Wrap(err, "failed to write file\n")
+		}
+		_ = f.Close()
+	}
+
 	return nil
 }
 
-func (g *Gerrit) push(_ context.Context) (string, error) {
-	return "", nil
+func (g *Gerrit) commit(ctx context.Context) (string, error) {
+	var out io.Writer
+
+	wt, err := g.repo.Worktree()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get worktree\n")
+	}
+
+	for _, item := range g.Patch.File {
+		if _, err := wt.Add(item.Name); err != nil {
+			return "", errors.Wrap(err, "failed to add file\n")
+		}
+	}
+
+	_, err = wt.Commit(g.Patch.Subject, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  g.Patch.Author,
+			Email: g.Patch.Email,
+		},
+	})
+
+	if err != nil {
+		return "", errors.Wrap(err, "failed to commit change\n")
+	}
+
+	if err := g.repo.Push(&git.PushOptions{
+		Progress:        out,
+		InsecureSkipTLS: true,
+	}); err != nil {
+		return "", errors.Wrap(err, "failed to push change\n")
+	}
+
+	url, err := g.parsePush(ctx, fmt.Sprint(out))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse push\n")
+	}
+
+	return url, nil
 }
 
 func (g *Gerrit) clean(_ context.Context) error {
+	_ = os.RemoveAll(g.Path)
+
+	g.Path = ""
+	g.Project = ""
+	g.Branch = ""
+	g.Patch = Patch{}
+
 	return nil
 }
 
@@ -193,8 +318,28 @@ func (g *Gerrit) parseChange(_ context.Context, content []*gitdiff.File) error {
 	}
 
 	for index, item := range g.Patch.File {
-		g.Patch.Diff[item.Name] = content[index].String()
+		g.Patch.Diff[item.Name] = content[index]
 	}
 
 	return nil
+}
+
+func (g *Gerrit) parsePush(_ context.Context, content string) (string, error) {
+	var match string
+
+	pattern := regexp.MustCompile(reviewUrl)
+
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	for scanner.Scan() {
+		line := scanner.Text()
+		if match = pattern.FindString(line); match != "" {
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	return match, nil
 }
