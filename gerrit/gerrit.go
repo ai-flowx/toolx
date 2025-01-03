@@ -90,6 +90,8 @@ func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) 
 		return "", errors.New("invalid arguments\n")
 	}
 
+	_ = g.Init(ctx)
+
 	_patch := args[0].(string)
 
 	if len(args) == count-1 {
@@ -119,7 +121,11 @@ func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) 
 		return "", err
 	}
 
-	url, err := g.commit(ctx)
+	if err := g.commit(ctx); err != nil {
+		return "", err
+	}
+
+	url, err := g.push(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -152,8 +158,9 @@ func (g *Gerrit) clone(ctx context.Context) error {
 	}
 
 	g.Path = path.Join(os.TempDir(), g.Project)
-
-	_ = os.RemoveAll(g.Path)
+	if _, err = os.Stat(g.Path); err == nil {
+		return errors.Wrap(err, "path already exists\n")
+	}
 
 	if g.repo, err = git.PlainCloneContext(ctx, g.Path, false, &git.CloneOptions{
 		URL:             fmt.Sprintf("%s/%s", remoteUrl, g.Project),
@@ -211,17 +218,15 @@ func (g *Gerrit) apply(_ context.Context) error {
 	return nil
 }
 
-func (g *Gerrit) commit(ctx context.Context) (string, error) {
-	var out io.Writer
-
+func (g *Gerrit) commit(_ context.Context) error {
 	wt, err := g.repo.Worktree()
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get worktree\n")
+		return errors.Wrap(err, "failed to get worktree\n")
 	}
 
 	for _, item := range g.Patch.File {
 		if _, err := wt.Add(item.Name); err != nil {
-			return "", errors.Wrap(err, "failed to add file\n")
+			return errors.Wrap(err, "failed to add file\n")
 		}
 	}
 
@@ -233,8 +238,18 @@ func (g *Gerrit) commit(ctx context.Context) (string, error) {
 	})
 
 	if err != nil {
-		return "", errors.Wrap(err, "failed to commit change\n")
+		return errors.Wrap(err, "failed to commit change\n")
 	}
+
+	return nil
+}
+
+func (g *Gerrit) push(ctx context.Context) (string, error) {
+	var out io.Writer
+
+	defer func(g *Gerrit, ctx context.Context) {
+		_ = g.reset(ctx)
+	}(g, ctx)
 
 	if err := g.repo.Push(&git.PushOptions{
 		Progress:        out,
@@ -251,13 +266,30 @@ func (g *Gerrit) commit(ctx context.Context) (string, error) {
 	return url, nil
 }
 
+func (g *Gerrit) reset(_ context.Context) error {
+	wt, err := g.repo.Worktree()
+	if err != nil {
+		return errors.Wrap(err, "failed to get worktree\n")
+	}
+
+	ref, err := g.repo.Head()
+	if err != nil {
+		return errors.Wrap(err, "failed to get head\n")
+	}
+
+	if err = wt.Reset(&git.ResetOptions{
+		Commit: ref.Hash(),
+		Mode:   git.HardReset,
+	}); err != nil {
+		return errors.Wrap(err, "failed to reset commit\n")
+	}
+
+	return nil
+}
+
 func (g *Gerrit) clean(_ context.Context) error {
 	_ = os.RemoveAll(g.Path)
-
-	g.Path = ""
-	g.Project = ""
-	g.Branch = ""
-	g.Patch = Patch{}
+	_ = os.Remove(g.Path)
 
 	return nil
 }
