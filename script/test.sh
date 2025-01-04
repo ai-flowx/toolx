@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export PKG_CONFIG_PATH=$PWD
+
 go env -w GOPROXY=https://goproxy.cn,direct
 
 if [ "$1" = "all" ]; then

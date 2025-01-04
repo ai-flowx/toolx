@@ -1,8 +1,7 @@
 package decorator
 
 /*
-#cgo CFLAGS: -I/usr/include/python3.10
-#cgo LDFLAGS: -lpython3.10
+#cgo pkg-config: python
 #include <Python.h>
 */
 import "C"
