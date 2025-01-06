@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"regexp"
 	"strings"
@@ -23,8 +24,13 @@ const (
 	description = "gerrit tools"
 	count       = 3
 
-	remoteUrl    = "https://android.googlesource.com"
-	remoteBranch = "main"
+	hookUrl  = "https://gerrit-review.googlesource.com"
+	hookName = "hooks/commit-msg"
+
+	repoUrl    = "https://android.googlesource.com"
+	repoBranch = "main"
+
+	reviewUrl = "https://android-review.googlesource.com"
 
 	hashCol = 2
 	fromCol = 3
@@ -32,8 +38,6 @@ const (
 
 	userName  = "name"
 	userEmail = "name@example.com"
-
-	reviewUrl = `https://[-a-zA-Z0-9]+\.googlesource\.com/c/[^/]+/[^/]+/[^/]+/\+/\d+`
 )
 
 type Gerrit struct {
@@ -64,7 +68,7 @@ type File struct {
 func (g *Gerrit) Init(_ context.Context) error {
 	g.Path = ""
 	g.Project = ""
-	g.Branch = remoteBranch
+	g.Branch = repoBranch
 	g.Patch = Patch{
 		File: []File{},
 		Diff: map[string]*gitdiff.File{},
@@ -117,6 +121,10 @@ func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) 
 		return "", err
 	}
 
+	if err := g.hook(ctx); err != nil {
+		return "", err
+	}
+
 	if err := g.apply(ctx); err != nil {
 		return "", err
 	}
@@ -163,7 +171,7 @@ func (g *Gerrit) clone(ctx context.Context) error {
 	}
 
 	if g.repo, err = git.PlainCloneContext(ctx, g.Path, false, &git.CloneOptions{
-		URL:             fmt.Sprintf("%s/%s", remoteUrl, g.Project),
+		URL:             fmt.Sprintf("%s/%s", repoUrl, g.Project),
 		ReferenceName:   plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", g.Branch)),
 		SingleBranch:    true,
 		Depth:           1,
@@ -186,6 +194,23 @@ func (g *Gerrit) config(_ context.Context) error {
 
 	if err := g.repo.SetConfig(cfg); err != nil {
 		return errors.Wrap(err, "failed to set config\n")
+	}
+
+	return nil
+}
+
+func (g *Gerrit) hook(_ context.Context) error {
+	l := fmt.Sprintf("%s/tools/%s", hookUrl, hookName)
+	o := fmt.Sprintf("%s/.git/%s", g.Path, hookName)
+
+	cmd := exec.Command("curl", "-L", l, "-o", o)
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "failed to run curl\n")
+	}
+
+	cmd = exec.Command("chmod", "+x", o)
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "failed to run chmod\n")
 	}
 
 	return nil
@@ -369,7 +394,7 @@ func (g *Gerrit) parseChange(_ context.Context, content []*gitdiff.File) error {
 func (g *Gerrit) parsePush(_ context.Context, content string) (string, error) {
 	var match string
 
-	pattern := regexp.MustCompile(reviewUrl)
+	pattern := regexp.MustCompile(fmt.Sprintf(`%s/c/[^/]+/[^/]+/[^/]+/\+/\d+`, reviewUrl))
 
 	scanner := bufio.NewScanner(strings.NewReader(content))
 	for scanner.Scan() {

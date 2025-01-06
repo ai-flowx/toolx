@@ -88,6 +88,23 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+func TestHook(t *testing.T) {
+	ctx := context.Background()
+	g, d := initGerritTest(ctx)
+
+	_ = g.load(ctx, d)
+
+	defer func(g *Gerrit, ctx context.Context) {
+		_ = g.clean(ctx)
+	}(&g, ctx)
+
+	_ = g.clone(ctx)
+	_ = g.config(ctx)
+
+	err := g.hook(ctx)
+	assert.Equal(t, nil, err)
+}
+
 func TestApply(t *testing.T) {
 	ctx := context.Background()
 	g, d := initGerritTest(ctx)
@@ -100,6 +117,7 @@ func TestApply(t *testing.T) {
 
 	_ = g.clone(ctx)
 	_ = g.config(ctx)
+	_ = g.hook(ctx)
 
 	err := g.apply(ctx)
 	assert.Equal(t, nil, err)
@@ -117,6 +135,7 @@ func TestCommit(t *testing.T) {
 
 	_ = g.clone(ctx)
 	_ = g.config(ctx)
+	_ = g.hook(ctx)
 	_ = g.apply(ctx)
 
 	err := g.commit(ctx)
@@ -139,6 +158,7 @@ func TestReset(t *testing.T) {
 
 	_ = g.clone(ctx)
 	_ = g.config(ctx)
+	_ = g.hook(ctx)
 	_ = g.apply(ctx)
 	_ = g.commit(ctx)
 
