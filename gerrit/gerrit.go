@@ -15,7 +15,6 @@ import (
 	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/pkg/errors"
 )
 
@@ -249,27 +248,12 @@ func (g *Gerrit) apply(_ context.Context) error {
 	return nil
 }
 
+// nolint:gosec
 func (g *Gerrit) commit(_ context.Context) error {
-	wt, err := g.repo.Worktree()
-	if err != nil {
-		return errors.Wrap(err, "failed to get worktree\n")
-	}
-
-	for _, item := range g.Patch.File {
-		if _, err := wt.Add(item.Name); err != nil {
-			return errors.Wrap(err, "failed to add file\n")
-		}
-	}
-
-	_, err = wt.Commit(g.Patch.Subject, &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  g.Patch.Author,
-			Email: g.Patch.Email,
-		},
-	})
-
-	if err != nil {
-		return errors.Wrap(err, "failed to commit change\n")
+	cmd := exec.Command("git", "commit", "--author", fmt.Sprintf("\"%s <%s>\"", g.Patch.Author, g.Patch.Email),
+		"-m", g.Patch.Subject, "-a", "-s")
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "failed to run commit\n")
 	}
 
 	return nil
