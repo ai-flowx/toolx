@@ -38,7 +38,7 @@ To https://android.googlesource.com/platform/build/soong
 func initGerritTest(_ context.Context) (Gerrit, string) {
 	g := Gerrit{
 		Project: "platform/build/soong",
-		Branch:  remoteBranch,
+		Branch:  repoBranch,
 		Patch: Patch{
 			File: []File{},
 			Diff: map[string]*gitdiff.File{},
@@ -158,7 +158,7 @@ func TestPush(t *testing.T) {
 	_ = g.apply(ctx)
 	_ = g.commit(ctx)
 
-	err := g.push(ctx)
+	_, err := g.push(ctx)
 	assert.Equal(t, nil, err)
 }
 
