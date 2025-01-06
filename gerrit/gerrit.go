@@ -278,10 +278,6 @@ func (g *Gerrit) commit(_ context.Context) error {
 func (g *Gerrit) push(ctx context.Context) (string, error) {
 	var out io.Writer
 
-	defer func(g *Gerrit, ctx context.Context) {
-		_ = g.reset(ctx)
-	}(g, ctx)
-
 	if err := g.repo.Push(&git.PushOptions{
 		Progress:        out,
 		InsecureSkipTLS: true,
