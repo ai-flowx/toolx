@@ -25,7 +25,8 @@ const (
 	count       = 3
 
 	hookUrl  = "https://gerrit-review.googlesource.com"
-	hookName = "hooks/commit-msg"
+	hookName = "commit-msg"
+	hookPerm = 0750
 
 	repoUrl    = "https://android.googlesource.com"
 	repoBranch = "main"
@@ -201,15 +202,14 @@ func (g *Gerrit) config(_ context.Context) error {
 
 // nolint:gosec
 func (g *Gerrit) hook(_ context.Context) error {
-	l := fmt.Sprintf("%s/tools/%s", hookUrl, hookName)
+	l := fmt.Sprintf("%s/tools/hooks/%s", hookUrl, hookName)
 	o := fmt.Sprintf("%s/.git/hooks/%s", g.Path, hookName)
 
-	cmd := exec.Command("mkdir", "-p", g.Path+"/.git/hooks")
-	if err := cmd.Run(); err != nil {
+	if err := os.Mkdir(g.Path+"/.git/hooks", hookPerm); err != nil {
 		return errors.Wrap(err, "failed to run mkdir\n")
 	}
 
-	cmd = exec.Command("curl", "-L", l, "-o", o)
+	cmd := exec.Command("curl", "-L", l, "-o", o)
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, "failed to run curl\n")
 	}
