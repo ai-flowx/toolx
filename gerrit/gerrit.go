@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -252,6 +251,8 @@ func (g *Gerrit) apply(_ context.Context) error {
 func (g *Gerrit) commit(_ context.Context) error {
 	cmd := exec.Command("git", "commit", "--author", fmt.Sprintf("\"%s <%s>\"", g.Patch.Author, g.Patch.Email),
 		"-m", g.Patch.Subject, "-a", "-s")
+	cmd.Dir = g.Path
+
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, "failed to run commit\n")
 	}
@@ -259,14 +260,14 @@ func (g *Gerrit) commit(_ context.Context) error {
 	return nil
 }
 
+// nolint:gosec
 func (g *Gerrit) push(ctx context.Context) (string, error) {
-	var out io.Writer
+	cmd := exec.Command("git", "push", "origin", fmt.Sprintf("HEAD:refs/for/%s", g.Branch))
+	cmd.Dir = g.Path
 
-	if err := g.repo.Push(&git.PushOptions{
-		Progress:        out,
-		InsecureSkipTLS: true,
-	}); err != nil {
-		return "", errors.Wrap(err, "failed to push change\n")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to run push\n")
 	}
 
 	url, err := g.parsePush(ctx, fmt.Sprint(out))
