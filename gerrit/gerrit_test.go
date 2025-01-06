@@ -143,7 +143,23 @@ func TestCommit(t *testing.T) {
 }
 
 func TestPush(t *testing.T) {
-	assert.Equal(t, nil, nil)
+	ctx := context.Background()
+	g, d := initGerritTest(ctx)
+
+	_ = g.load(ctx, d)
+
+	defer func(g *Gerrit, ctx context.Context) {
+		_ = g.clean(ctx)
+	}(&g, ctx)
+
+	_ = g.clone(ctx)
+	_ = g.config(ctx)
+	_ = g.hook(ctx)
+	_ = g.apply(ctx)
+	_ = g.commit(ctx)
+
+	err := g.push(ctx)
+	assert.Equal(t, nil, err)
 }
 
 func TestReset(t *testing.T) {
