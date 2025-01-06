@@ -64,6 +64,8 @@ type File struct {
 	Deletion  int
 }
 
+type Progress struct{}
+
 func (g *Gerrit) Init(_ context.Context) error {
 	g.Path = ""
 	g.Project = ""
@@ -262,15 +264,18 @@ func (g *Gerrit) commit(_ context.Context) error {
 
 // nolint:gosec
 func (g *Gerrit) push(ctx context.Context) (string, error) {
+	progress := &Progress{}
+
 	cmd := exec.Command("git", "push", "origin", fmt.Sprintf("HEAD:refs/for/%s", g.Branch))
 	cmd.Dir = g.Path
+	cmd.Stderr = progress
+	cmd.Stdout = progress
 
-	out, err := cmd.Output()
-	if err != nil {
-		return "", errors.Wrap(err, "failed to run push\n")
+	if err := cmd.Run(); err != nil {
+		return "", errors.Wrap(err, "failed to run git push\n")
 	}
 
-	url, err := g.parsePush(ctx, fmt.Sprint(out))
+	url, err := g.parsePush(ctx, fmt.Sprint(progress))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse push\n")
 	}
@@ -396,4 +401,10 @@ func (g *Gerrit) parsePush(_ context.Context, content string) (string, error) {
 	}
 
 	return match, nil
+}
+
+func (p *Progress) Write(data []byte) (n int, err error) {
+	fmt.Printf("%s", string(data))
+
+	return len(data), nil
 }
