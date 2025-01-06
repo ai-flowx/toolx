@@ -199,11 +199,17 @@ func (g *Gerrit) config(_ context.Context) error {
 	return nil
 }
 
+// nolint:gosec
 func (g *Gerrit) hook(_ context.Context) error {
 	l := fmt.Sprintf("%s/tools/%s", hookUrl, hookName)
-	o := fmt.Sprintf("%s/.git/%s", g.Path, hookName)
+	o := fmt.Sprintf("%s/.git/hooks/%s", g.Path, hookName)
 
-	cmd := exec.Command("curl", "-L", l, "-o", o)
+	cmd := exec.Command("mkdir", "-p", g.Path+"/.git/hooks")
+	if err := cmd.Run(); err != nil {
+		return errors.Wrap(err, "failed to run mkdir\n")
+	}
+
+	cmd = exec.Command("curl", "-L", l, "-o", o)
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, "failed to run curl\n")
 	}
