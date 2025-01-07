@@ -221,11 +221,3 @@ func TestParseChange(t *testing.T) {
 	err := g.parseChange(ctx, c)
 	assert.Equal(t, nil, err)
 }
-
-func TestParsePush(t *testing.T) {
-	ctx := context.Background()
-	g, _ := initGerritTest(ctx)
-
-	_, err := g.parsePush(ctx, pushGerritTest)
-	assert.Equal(t, nil, err)
-}

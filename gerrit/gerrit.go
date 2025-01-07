@@ -1,7 +1,6 @@
 package gerrit
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
@@ -48,6 +47,7 @@ type Gerrit struct {
 	Project string
 	Branch  string
 	Patch   Patch
+	Url     string
 
 	repo *git.Repository
 }
@@ -80,8 +80,6 @@ type File struct {
 	Insertion int
 	Deletion  int
 }
-
-type Progress struct{}
 
 func (g *Gerrit) Init(_ context.Context) error {
 	var c Config
@@ -164,6 +162,16 @@ func (g *Gerrit) Call(ctx context.Context, _ func(context.Context, interface{}) 
 	}
 
 	return url, nil
+}
+
+func (g *Gerrit) Write(data []byte) (n int, err error) {
+	pattern := regexp.MustCompile(fmt.Sprintf(`%s/c/[^/]+/[^/]+/[^/]+/\+/\d+`, reviewUrl))
+
+	if match := pattern.FindString(string(data)); match != "" {
+		g.Url = match
+	}
+
+	return len(data), nil
 }
 
 func (g *Gerrit) load(ctx context.Context, content string) error {
@@ -288,23 +296,16 @@ func (g *Gerrit) commit(_ context.Context) error {
 
 // nolint:gosec
 func (g *Gerrit) push(ctx context.Context) (string, error) {
-	progress := &Progress{}
-
 	cmd := exec.Command("git", "push", "origin", fmt.Sprintf("HEAD:refs/for/%s", g.Branch))
 	cmd.Dir = g.Path
-	cmd.Stderr = progress
-	cmd.Stdout = progress
+	cmd.Stderr = g
+	cmd.Stdout = g
 
 	if err := cmd.Run(); err != nil {
 		return "", errors.Wrap(err, "failed to run git push\n")
 	}
 
-	url, err := g.parsePush(ctx, fmt.Sprint(progress))
-	if err != nil {
-		return "", errors.Wrap(err, "failed to parse push\n")
-	}
-
-	return url, nil
+	return g.Url, nil
 }
 
 func (g *Gerrit) reset(_ context.Context) error {
@@ -405,30 +406,4 @@ func (g *Gerrit) parseChange(_ context.Context, content []*gitdiff.File) error {
 	}
 
 	return nil
-}
-
-func (g *Gerrit) parsePush(_ context.Context, content string) (string, error) {
-	var match string
-
-	pattern := regexp.MustCompile(fmt.Sprintf(`%s/c/[^/]+/[^/]+/[^/]+/\+/\d+`, reviewUrl))
-
-	scanner := bufio.NewScanner(strings.NewReader(content))
-	for scanner.Scan() {
-		line := scanner.Text()
-		if match = pattern.FindString(line); match != "" {
-			break
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-
-	return match, nil
-}
-
-func (p *Progress) Write(data []byte) (n int, err error) {
-	fmt.Printf("%s", string(data))
-
-	return len(data), nil
 }
