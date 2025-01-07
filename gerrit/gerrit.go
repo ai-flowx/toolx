@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,6 +16,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -34,18 +36,33 @@ const (
 	hashCol = 2
 	fromCol = 3
 	fileCol = 4
-
-	userName  = "name"
-	userEmail = "name@example.com"
 )
 
+//go:embed gerrit.yml
+var config []byte
+
 type Gerrit struct {
+	Config Config
+
 	Path    string
 	Project string
 	Branch  string
 	Patch   Patch
 
 	repo *git.Repository
+}
+
+type Config struct {
+	Repo Repo `yaml:"repo"`
+}
+
+type Repo struct {
+	User User `yaml:"user"`
+}
+
+type User struct {
+	Name  string `yaml:"name"`
+	Email string `yaml:"email"`
 }
 
 type Patch struct {
@@ -67,6 +84,13 @@ type File struct {
 type Progress struct{}
 
 func (g *Gerrit) Init(_ context.Context) error {
+	var c Config
+
+	if err := yaml.Unmarshal(config, &c); err != nil {
+		return err
+	}
+
+	g.Config = c
 	g.Path = ""
 	g.Project = ""
 	g.Branch = repoBranch
@@ -190,8 +214,8 @@ func (g *Gerrit) config(_ context.Context) error {
 		return errors.Wrap(err, "failed to get config\n")
 	}
 
-	cfg.User.Name = userName
-	cfg.User.Email = userEmail
+	cfg.User.Name = g.Config.Repo.User.Name
+	cfg.User.Email = g.Config.Repo.User.Email
 
 	if err := g.repo.SetConfig(cfg); err != nil {
 		return errors.Wrap(err, "failed to set config\n")

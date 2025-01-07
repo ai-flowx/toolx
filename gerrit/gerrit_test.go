@@ -12,6 +12,7 @@ import (
 
 	"github.com/bluekeyes/go-gitdiff/gitdiff"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -36,7 +37,14 @@ To https://android.googlesource.com/platform/build/soong
 )
 
 func initGerritTest(_ context.Context) (Gerrit, string) {
+	var c Config
+
+	file, _ := os.ReadFile("gerrit.yml")
+	_ = yaml.Unmarshal(file, &c)
+
 	g := Gerrit{
+		Config:  c,
+		Path:    "",
 		Project: "platform/build/soong",
 		Branch:  repoBranch,
 		Patch: Patch{
